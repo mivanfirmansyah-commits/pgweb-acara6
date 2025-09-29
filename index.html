@@ -36,6 +36,16 @@
             padding: 5px 10px; font-size: 14px; font-weight: bold; box-shadow: none;
         }
         .search-tip b { color: #212529; }
+
+        /* Style untuk tombol toggle legenda */
+        .leaflet-control-legend-toggle a {
+            font-size: 1.2rem;
+            width: 34px;
+            height: 34px;
+            line-height: 34px;
+            text-align: center;
+            cursor: pointer;
+        }
     </style>
 </head>
 
@@ -178,8 +188,13 @@
 
             if (overlayLayers['Batas Kecamatan']) { overlayLayers['Batas Kecamatan'].addTo(map); }
 
-            L.control.layers(basemaps, overlayLayers, { collapsed: false }).addTo(map);
+            // Tentukan status mobile berdasarkan lebar layar
+            const isMobile = window.innerWidth <= 768;
 
+            // Buat kontrol layer dengan opsi collapsed yang responsif
+            const layerControl = L.control.layers(basemaps, overlayLayers, { collapsed: isMobile }).addTo(map);
+
+            // Buat legenda
             var legend = L.control({ position: 'bottomright' });
             legend.onAdd = function (map) {
                 var div = L.DomUtil.create('div', 'info legend');
@@ -187,13 +202,35 @@
                 for (var i = 0; i < grades.length; i++) { var from = grades[i], to = grades[i + 1]; popList += `<li><i class="color-box" style="background:${getKecamatanColor(from + 1)}"></i> ${from.toLocaleString('id-ID')} ${to ? '&ndash; ' + to.toLocaleString('id-ID') : '+'}</li>`; }
                 var roadList = `<li><span class="legend-line" style="border-color: red; border-width: 4px 0 0 0;"></span> Jalan Propinsi</li><li><span class="legend-line" style="border-color: red; border-width: 2.5px 0 0 0;"></span> Kabupaten</li><li><span class="legend-line" style="border-color: red; border-width: 1.5px 0 0 0;"></span> Jalan Lain</li>`;
                 var riverList = `<li><span class="legend-line" style="border-color: #007BFF; border-width: 2px 0 0 0;"></span> Sungai</li>`;
-
-                div.innerHTML = `<h4><i class="fas fa-users"></i> Jumlah Penduduk</h4><ul>${popList}</ul>` +
-                                `<h4 class="legend-title"><i class="fas fa-road"></i> Klasifikasi Jalan</h4><ul>${roadList}</ul>` +
-                                `<h4 class="legend-title"><i class="fas fa-water"></i> Lainnya</h4><ul>${riverList}</ul>`;
+                div.innerHTML = `<h4><i class="fas fa-users"></i> Jumlah Penduduk</h4><ul>${popList}</ul><h4 class="legend-title"><i class="fas fa-road"></i> Klasifikasi Jalan</h4><ul>${roadList}</ul><h4 class="legend-title"><i class="fas fa-water"></i> Lainnya</h4><ul>${riverList}</ul>`;
                 return div;
             };
             legend.addTo(map);
+
+            // Logika untuk Tampilan Mobile
+            if (isMobile) {
+                // Sembunyikan legenda secara default di mobile
+                const legendContainer = legend.getContainer();
+                legendContainer.style.display = 'none';
+
+                // Buat dan tambahkan tombol untuk toggle legenda
+                L.Control.LegendToggle = L.Control.extend({
+                    onAdd: function(map) {
+                        const button = L.DomUtil.create('div', 'leaflet-bar leaflet-control leaflet-control-legend-toggle');
+                        button.innerHTML = '<a href="#" title="Tampilkan/Sembunyikan Legenda"><i class="fas fa-list-ul"></i></a>';
+                        L.DomEvent.on(button, 'click', function (e) {
+                            L.DomEvent.stop(e);
+                            if (legendContainer.style.display !== 'none') {
+                                legendContainer.style.display = 'none';
+                            } else {
+                                legendContainer.style.display = 'block';
+                            }
+                        });
+                        return button;
+                    },
+                });
+                new L.Control.LegendToggle({ position: 'topright' }).addTo(map);
+            }
 
             if (overlayLayers['Batas Kecamatan']) {
                 var searchControl = new L.Control.Search({
